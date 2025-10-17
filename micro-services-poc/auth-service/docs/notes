@@ -1,0 +1,30 @@
+git remote add origin https://github.com/jwsanil/spring-pocs.git
+git branch -M main
+git push -u origin main
+
+
+
+http://localhost:9000/oauth2/authorize?response_type=code&client_id=client&scope=openid%20read%20write&redirect_uri=http://localhost:8080/callback
+
+
+http://localhost:9000/oauth2/authorize?response_type=code&client_id=client&scope=openid%20read%20write&redirect_uri=http://localhost:8080/callback
+
+curl -X POST "http://localhost:9000/oauth2/token" ^
+  -H "Content-Type: application/x-www-form-urlencoded" ^
+  -H "Authorization: Basic Y2xpZW50OnNlY3JldA==" ^
+  -d "grant_type=authorization_code" ^
+  -d "code=g8kFLpU56iAGoUxGKIqBW8TkBeF1i-r02ucI2BqrauDZ0iC8Og3ywrZb4V4eGrqipz4_VZJGnZ9ZWJbOtQMR0g58SRm1E4NM_kv-nXAsdQt-NGwV2o-F3fccrkjj7W7Z" ^
+  -d "redirect_uri=http://localhost:8080/callback"
+
+
+
+curl http://localhost:9000/.well-known/openid-configuration
+
+
+
+curl -X POST "http://localhost:9000/oauth2/token" -H "Content-Type: application/x-www-form-urlencoded" -H "Authorization: Basic Y2xpZW50OnNlY3JldA==" -d "grant_type=authorization_code" -d "code=g8kFLpU56iAGoUxGKIqBW8TkBeF1i-r02ucI2BqrauDZ0iC8Og3ywrZb4V4eGrqipz4_VZJGnZ9ZWJbOtQMR0g58SRm1E4NM_kv-nXAsdQt-NGwV2o-F3fccrkjj7W7Z" -d "redirect_uri=http://localhost:8080/callback"
+
+
+
+
+
