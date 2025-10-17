@@ -6,11 +6,12 @@ import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.oidc.OidcScopes;
 import org.springframework.security.oauth2.server.authorization.client.InMemoryRegisteredClientRepository;
-import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
+import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
 import org.springframework.security.oauth2.server.authorization.settings.ClientSettings;
 
@@ -24,66 +25,64 @@ import java.util.UUID;
 @Configuration
 public class AuthorizationServerConfiguration {
 
+    // Inject PasswordEncoder so we can store an encoded client secret
     @Bean
-    public RegisteredClientRepository registeredClientRepository() {
+    public RegisteredClientRepository registeredClientRepository(PasswordEncoder passwordEncoder) {
 
         RegisteredClient registeredClient = RegisteredClient.withId(UUID.randomUUID().toString())
                 .clientId("client")
-                .clientSecret("{noop}secret")
+                // encode the client secret (recommended) - you can also use "{noop}secret" if you prefer plain
+                .clientSecret(passwordEncoder.encode("secret"))
                 .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
-                .authorizationGrantType((AuthorizationGrantType.REFRESH_TOKEN))
+                .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
                 .authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
-                .redirectUri("http://localhost:8080/login/oatuh2/code")
+                .redirectUri("http://localhost:8080/callback")
                 .scope(OidcScopes.OPENID)
                 .scope("read")
-                .scope("write").clientSettings(ClientSettings.builder().
-                        requireAuthorizationConsent(true).build()).
-
-                build();
+                .scope("write")
+                .clientSettings(ClientSettings.builder()
+                        .requireAuthorizationConsent(true) // prompts consent screen
+                        .build())
+                .build();
 
         return new InMemoryRegisteredClientRepository(registeredClient);
-
     }
 
     @Bean
     public JWKSource<SecurityContext> jwkSource() {
-
         RSAKey rsaKey = JwtKeyGeneration.generateRsa();
         JWKSet jwkSet = new JWKSet(rsaKey);
-        JWKSource<SecurityContext> securityContextJWKSource = (jwkSelector, securityContext) -> jwkSelector.select(jwkSet);
-        return securityContextJWKSource;
-
+        return (jwkSelector, securityContext) -> jwkSelector.select(jwkSet);
     }
 
     @Bean
     public AuthorizationServerSettings authorizationServerSettings() {
-
-        return AuthorizationServerSettings.builder().build();
+        // set explicit issuer (helps clients and metadata)
+        return AuthorizationServerSettings.builder()
+                .issuer("http://localhost:9000")
+                .build();
     }
 
-
+    // Helper for generating RSA key pair for signing tokens (suitable for dev/testing)
     public static final class JwtKeyGeneration {
-
         public static RSAKey generateRsa() {
-
             KeyPair keyPair = generateRsaKey();
-
             RSAPublicKey rsaPublicKey = (RSAPublicKey) keyPair.getPublic();
             RSAPrivateKey rsaPrivateKey = (RSAPrivateKey) keyPair.getPrivate();
-            return new RSAKey.Builder(rsaPublicKey).privateKey(rsaPrivateKey).keyID(UUID.randomUUID().toString()).build();
+            return new RSAKey.Builder(rsaPublicKey)
+                    .privateKey(rsaPrivateKey)
+                    .keyID(UUID.randomUUID().toString())
+                    .build();
         }
 
         private static KeyPair generateRsaKey() {
-
-            KeyPairGenerator keyPairGenerator = null;
             try {
-                keyPairGenerator = KeyPairGenerator.getInstance("RSA");
+                KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
+                keyPairGenerator.initialize(2048);
+                return keyPairGenerator.generateKeyPair();
             } catch (NoSuchAlgorithmException e) {
-                throw new RuntimeException(e);
+                throw new IllegalStateException(e);
             }
-            keyPairGenerator.initialize(2048);
-            return keyPairGenerator.generateKeyPair();
-
         }
     }
 }
